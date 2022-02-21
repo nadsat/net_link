@@ -19,10 +19,12 @@ defmodule NetLink do
   @nlm_f_request 0x01
   @nlm_f_dump 0x300
   @af_inet 2
+  @rtmgrp_ipv4_route 0x40
 
   def get_addr() do
     {:ok, s} = :socket.open(@af_net_link, :raw)
     {:ok, addr} = :socket.sockname(s)
+    IO.inspect(addr)
     :ok = :socket.bind(s, addr)
 
     nlh_type = <<@rtm_get_addr::little-unsigned-integer-size(16)>>
@@ -51,6 +53,34 @@ defmodule NetLink do
 
     :socket.close(s)
     get_addrs_list(data)
+  end
+
+  def get_events() do
+    {:ok, s} = :socket.open(@af_net_link, :raw)
+    {:ok, sname} = :socket.sockname(s)
+
+    pad = <<0::little-unsigned-integer-size(16)>>
+    pid = <<0::little-unsigned-integer-size(32)>>
+    group = <<@rtmgrp_ipv4_route::little-unsigned-integer-size(32)>>
+    bin_addr = [pad, pid, group] |> :erlang.list_to_binary()
+    addr = %{sname | addr: bin_addr}
+    IO.inspect(addr, label: "addr")
+    bind_res = :socket.bind(s, addr)
+
+    IO.inspect(bind_res, label: "bind result")
+
+    {:ok, new_addr} = :socket.sockname(s)
+
+    IO.inspect(new_addr, label: "addr")
+
+    {:ok, res} = :socket.recvmsg(s)
+
+    [data] = res.iov
+
+    IO.inspect(data, label: "event")
+
+    :socket.close(s)
+    data
   end
 
   defp get_addrs_list(data) do
