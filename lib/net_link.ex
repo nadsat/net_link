@@ -1,4 +1,6 @@
 defmodule NetLink do
+  alias NetLink.Header
+
   @moduledoc """
   Documentation for `NetLink`.
   """
@@ -6,18 +8,11 @@ defmodule NetLink do
   @doc """
   Get addr.
 
-  ## Examples
-
-      iex> NetLink.get_addr()
-      :ok
-
   """
   use Bitwise
 
   @af_net_link 16
   @rtm_get_addr 22
-  @nlm_f_request 0x01
-  @nlm_f_dump 0x300
   @af_inet 2
   @rtmgrp_ipv4_route 0x40
 
@@ -27,24 +22,16 @@ defmodule NetLink do
     IO.inspect(addr)
     :ok = :socket.bind(s, addr)
 
-    nlh_type = <<@rtm_get_addr::little-unsigned-integer-size(16)>>
-    flags = @nlm_f_request ||| @nlm_f_dump
-    nlh_flags = <<flags::little-unsigned-integer-size(16)>>
+    flags = Header.nlm_f_request() ||| Header.nlm_f_dump()
     seq = :os.system_time(:seconds)
-    nlh_seq = <<seq::little-unsigned-integer-size(32)>>
-    rtgen_family = <<@af_inet::little-unsigned-integer-size(32)>>
     pid = System.pid() |> String.to_integer()
-    nlh_pid = <<pid::little-unsigned-integer-size(32)>>
+    h = struct(Header, %{flags: flags, type: @rtm_get_addr, seq_number: seq, proc_pid: pid})
 
-    IO.inspect(seq, label: "seq")
-    IO.inspect(pid, label: "pid")
-    content = [nlh_type, nlh_flags, nlh_seq, nlh_pid, rtgen_family] |> :erlang.list_to_binary()
+    rtgen_family = <<@af_inet::little-unsigned-integer-size(32)>>
 
-    l = (content |> byte_size()) + 4
+    header = Header.encode(h, byte_size(rtgen_family))
 
-    len = <<l::little-unsigned-integer-size(32)>>
-
-    msg = [len, content] |> :erlang.list_to_binary()
+    msg = [header, rtgen_family] |> :erlang.list_to_binary()
     :ok = :socket.send(s, msg)
 
     {:ok, res} = :socket.recvmsg(s, 2000)
