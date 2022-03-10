@@ -1,0 +1,39 @@
+name: ci
+
+on: [push, pull_request]
+
+jobs:
+  ci:
+    strategy:
+      matrix:
+        elixir: ["1.12.3"]
+        otp: ["24.1"]
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/cache@v1
+        with:
+          key: test-${{ hashFiles('mix.lock') }}
+          path: _build
+
+      - uses: actions/setup-elixir@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+          experimental-otp: true
+
+      - name: Run mix deps.get
+        run: mix deps.get
+
+      - name: Run mix compile
+        env:
+          MIX_ENV: test
+        run: mix compile
+
+      - name: Run mix test
+        env:
+          MIX_ENV: test
+        run: mix test
