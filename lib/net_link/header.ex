@@ -3,6 +3,7 @@ defmodule NetLink.Header do
   use Bitwise
 
   @len_size 4
+  @header_size 16
 
   const(:nlm_f_request, 0x01)
   const(:nlm_f_multi, 0x02)
@@ -49,5 +50,23 @@ defmodule NetLink.Header do
 
     [nlh_len, content]
     |> :erlang.list_to_binary()
+  end
+
+  @spec decode(term()) :: %NetLink.Header{} | {:error, term()}
+  def decode(header) when byte_size(header) == @header_size do
+    <<len::little-integer-size(32), type::little-integer-size(16), flags::little-integer-size(16),
+      seq::little-integer-size(32), proc_pid::little-integer-size(32)>> = header
+
+    struct(NetLink.Header, %{
+      len: len,
+      flags: flags,
+      type: type,
+      seq_number: seq,
+      proc_pid: proc_pid
+    })
+  end
+
+  def decode(_header) do
+    {:error, "invalid header size"}
   end
 end

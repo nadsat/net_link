@@ -79,7 +79,9 @@ defmodule NetLink do
   end
 
   defp get_ip_list(content, ip_list) do
-    <<l::little-integer-size(32), _r::binary>> = content
+    <<header::binary-size(16), _r::binary>> = content
+    h = Header.decode(header)
+    l = h.len
     <<payload::binary-size(l), rest::binary>> = content
     <<_l::little-integer-size(32), msg::binary>> = payload
     new_list = [get_ip(msg) | ip_list]

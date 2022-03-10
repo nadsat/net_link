@@ -14,4 +14,20 @@ defmodule NetLinkTest do
 
     assert Header.encode(h, 4) == encoded_header
   end
+
+  test "decode header" do
+    header = <<76, 0, 0, 0, 20, 0, 2, 0, 85, 92, 41, 98, 123, 49, 13, 0>>
+
+    decoded = %NetLink.Header{
+      flags: 2,
+      len: 76,
+      proc_pid: 864_635,
+      seq_number: 1_646_877_781,
+      type: 20
+    }
+
+    h = Header.decode(header)
+
+    assert ^h = decoded
+  end
 end
